@@ -4,6 +4,7 @@ import anthropic
 from dataclasses import dataclass
 import base64
 import os
+import pickle
 
 from config import *
 
@@ -168,6 +169,11 @@ class Commands:
                 "parts": all_output
             }
         ]
+
+        os.makedirs(f"data/{self.msg.guild.id}", exist_ok=True)
+
+        with open(f"data/{self.msg.guild.id}/generativeAI.pickle", "wb") as f:
+            pickle.dump(generativeAI, f)
 
         await sent_msg.add_reaction("✅")
 

@@ -1,0 +1,10 @@
+services:
+  rebot-7:
+    image: ghcr.io/repryty/rebot-7
+    volumes:
+      - data:/usr/src/app/data
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Seoul

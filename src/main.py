@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 import google.generativeai as genai
 import asyncio
+import pickle
 
 from commands import *
 
@@ -29,6 +30,14 @@ async def on_ready():
     await client.change_presence(
         activity=discord.Game("리프봇!")
     )
+
+    os.makedirs("data", exist_ok=True)
+
+    with os.scandir("data") as entries:
+        for entry in entries:
+            with open(f"data/{entry.name}/generativeAI.pickle", "rb") as f:
+                guild_genai[int(entry.name)] = pickle.load(f)
+
     while True:
         if len(genai_queue)>0:
             data = genai_queue.pop(0)
