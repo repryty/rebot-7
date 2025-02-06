@@ -1,3 +1,3 @@
 docker compose down
-docker rmi ghcr.io/repryty/rebot-6
+docker rmi ghcr.io/repryty/rebot-7
 docker compose up -ds
