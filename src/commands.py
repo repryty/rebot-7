@@ -6,7 +6,6 @@ import base64
 import os
 import pickle
 import re
-import docker
 
 from config import *
 
@@ -56,7 +55,7 @@ class Commands:
 
     async def quit(self) -> None:
         if self.msg.author.id not in ADMIN_USER: return
-        docker.from_env().containers.get(os.environ.get('HOSTNAME')).restart()
+        quit()
 
     async def ping(self) -> None:
         await self.msg.channel.send(f"{self.client.latency * 1000:.3f}ms")

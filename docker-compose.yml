@@ -3,7 +3,7 @@ services:
     image: ghcr.io/repryty/rebot-7
     volumes:
       - ./data:/usr/src/app/data
-    restart: unless-stopped
+    restart: always
     env_file:
       - .env
     environment:
