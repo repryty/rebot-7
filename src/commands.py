@@ -5,8 +5,15 @@ from dataclasses import dataclass
 import base64
 import os
 import pickle
+import re
+import docker
 
 from config import *
+
+def apply_custom_emoji(inp: str)->str:
+    for target, emoji in EMOJIES.items():
+        inp = re.sub(target, emoji, inp)
+    return inp
 
 @dataclass
 class GenerativeAI:
@@ -34,8 +41,22 @@ class Commands:
             "핑": self.ping,
             "모델": self.model_list,
             "초기화": self.reset_model,
-            "temp": self.set_temp
+            "temp": self.set_temp,
+            "eval": self.eval,
+            "quit": self.quit,
+            "명령어": self.print_commands_list
         }
+
+    async def print_commands_list(self) -> None:
+        await self.msg.channel.send(", ".join(self.COMMANDS_LIST.keys()))
+
+    async def eval(self) -> None:
+        if self.msg.author.id not in ADMIN_USER: return
+        await self.msg.channel.send(f"```\n{eval(self.msg.content[7:])}\n```")
+
+    async def quit(self) -> None:
+        if self.msg.author.id not in ADMIN_USER: return
+        docker.from_env().containers.get(os.environ.get('HOSTNAME')).restart()
 
     async def ping(self) -> None:
         await self.msg.channel.send(f"{self.client.latency * 1000:.3f}ms")
@@ -65,12 +86,12 @@ class Commands:
         # await self.msg.channel.send(str(model_list))
     
     async def send_chat(self, generativeAI: GenerativeAI)->None:
+        ignored_files = []
         
         gemini_attachments = []
         claude_attachments = []
         for i, attachment in enumerate(self.msg.attachments):
             filename = f"{self.msg.author.id}-{i}.{attachment.filename.split(".")[-1]}" # {userid}-{i}.{png,jpg,..etc}
-            await attachment.save(fp=filename)
             
             match attachment.filename.split(".")[-1]:
                 case "jpg":
@@ -83,8 +104,31 @@ class Commands:
                     mime_type = "image/webp"
                 case "heif":
                     mime_type = "image/heif"
+                case "pdf":
+                    mime_type = "application/pdf"
+                case "js":
+                    mime_type = "application/x-javascript"
+                case "py":
+                    mime_type = "application/x-python"
+                case "txt":
+                    mime_type = "text/plain"
+                case "html":
+                    mime_type = "text/html"
+                case "css":
+                    mime_type = "text/css"
+                case "md":
+                    mime_type = "text/md"
+                case "csv":
+                    mime_type = "text/csv"
+                case "xml":
+                    mime_type = "text/xml"
+                case "rtf":
+                    mime_type = "text/rtf"
                 case _:
+                    ignored_files.append(attachment.filename)
                     break
+
+            await attachment.save(fp=filename)
 
             with open(filename, "rb") as f:
                 data = base64.b64encode(f.read()).decode('utf-8')
@@ -99,20 +143,24 @@ class Commands:
 
             os.remove(filename)
         
-        all_output = ""
+        output = ""
+
+        if ignored_files:
+            output=f"-# 일부 파일은 처리되지 않았습니다: ({', '.join(ignored_files)})\n"
+
+        all_output = output
 
         if generativeAI.is_gemini:
-            model = genai.GenerativeModel(generativeAI.model).start_chat(history=generativeAI.gemini_history)
+            model = genai.GenerativeModel(generativeAI.model, system_instruction=DEFAULT_INSTRUCTION).start_chat(history=generativeAI.gemini_history)
 
             response = model.send_message([self.msg.content[2:]]+gemini_attachments, generation_config={
                 "temperature": generativeAI.temperature,
                 "max_output_tokens": generativeAI.max_token,
             }, stream=True)
-            output = ""
             sent_msg = await self.msg.channel.send("<a:loading:1264015095223287878>")
             for chunk in response:
                 all_output+=chunk.text
-                output+=chunk.text
+                output=apply_custom_emoji(output+chunk.text)
 
                 if len(output) >1900:
                     await sent_msg.edit("\n".join(output.split("\n")[0:-1]))
@@ -130,7 +178,6 @@ class Commands:
                 ] + claude_attachments
                 })
             sent_msg = await self.msg.channel.send("<a:loading:1264015095223287878>")
-            output = ""
             with self.claude.messages.stream(
                 model=self.generativeAI.model,
                 max_tokens=2400,
