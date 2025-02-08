@@ -123,6 +123,36 @@ class Commands:
                     mime_type = "text/xml"
                 case "rtf":
                     mime_type = "text/rtf"
+                case "wav":
+                    mime_type = "audio/wav"
+                case "mp3":
+                    mime_type = "audio/mp3"
+                case "aiff":
+                    mime_type = "audio/aiff"
+                case "aac":
+                    mime_type = "audio/aac"
+                case "ogg":
+                    mime_type = "audio/ogg"
+                case "flac":
+                    mime_type = "audio/flac"
+                case "mp4":
+                    mime_type = "video/mp4"
+                case "mpg":
+                    mime_type = "video/mpeg"
+                case "mov":
+                    mime_type = "video/mov"
+                case "avi":
+                    mime_type = "video/avi"
+                case "flv":
+                    mime_type = "video/x-flv"
+                case "mpg":
+                    mime_type = "video/mpg"
+                case "webm":
+                    mime_type = "video/webm"
+                case "wmv":
+                    mime_type = "video/wmv"
+                case "3gpp":
+                    mime_type = "video/3gpp"
                 case _:
                     ignored_files.append(attachment.filename)
                     break
