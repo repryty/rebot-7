@@ -28,6 +28,7 @@ class GenerativeAI:
     }
     gemini_history = []
     claude_history = []
+    is_claude_extended_thinking_enabled=False
 
 class Commands:
     def __init__(self, client: discord.client, msg: discord.Message, claude: anthropic.Anthropic, generativeAI: GenerativeAI) -> None:
@@ -43,8 +44,27 @@ class Commands:
             "temp": self.set_temp,
             "eval": self.eval,
             "quit": self.quit,
-            "명령어": self.print_commands_list
+            "명령어": self.print_commands_list,
+            "모델목록": self.get_models,
+            "고급클로드": self.toggle_claude_thinking
         }
+
+    async def toggle_claude_thinking(self) -> None:
+        prev_state = self.generativeAI.is_claude_extended_thinking_enabled
+        self.generativeAI.is_claude_extended_thinking_enabled = not prev_state
+        print(f"이전 상태: {prev_state}, 변경된 상태: {self.generativeAI.is_claude_extended_thinking_enabled}")
+        
+        # Discord에 현재 상태 전송
+        embed = discord.Embed(title="REBOT LLM", color=MAIN_COLOR)
+        embed.add_field(
+            name="Claude Extended Thinking 모드 상태가 변경되었습니다.", 
+            value=f"{'활성화' if prev_state else '비활성화'} → {'활성화' if self.generativeAI.is_claude_extended_thinking_enabled else '비활성화'}"
+        )
+        await self.msg.channel.send(embed=embed)
+        
+    async def get_models(self) -> None:
+        models = [i.id for i in self.claude.models.list().data] + [i.name[7:] for i in genai.list_models() if ("generateContent" in i.supported_generation_methods) and ("exp" in i.name)]
+        await self.msg.channel.send("\n".join(models))
 
     async def print_commands_list(self) -> None:
         await self.msg.channel.send(", ".join(self.COMMANDS_LIST.keys()))
@@ -61,28 +81,32 @@ class Commands:
         await self.msg.channel.send(f"{self.client.latency * 1000:.3f}ms")
         
     async def model_list(self) -> None:
-        gemini_model_list = ["gemini-1.5-pro", "gemini-1.5-flash"]+[i.name[7:] for i in genai.list_models() if ("generateContent" in i.supported_generation_methods) and ("exp" in i.name)]
-        claude_model_list = ["claude-3-7-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-opus-latest"]
-        model_list = gemini_model_list+claude_model_list
-        
+        if len(self.msg.content)>=5:
+            self.generativeAI.model=self.msg.content[5:]
+            await self.msg.channel.send(embed=discord.Embed(title="REBOT LLM", color=MAIN_COLOR).add_field(name="다음 모델로 지정되었습니다!", value=self.generativeAI.model))
+        else:
+            gemini_model_list = ["gemini-1.5-pro", "gemini-1.5-flash"]+[i.name[7:] for i in genai.list_models() if ("generateContent" in i.supported_generation_methods) and ("exp" in i.name)]
+            claude_model_list = ["claude-3-7-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-opus-latest"]
+            model_list = gemini_model_list+claude_model_list
+            
 
-        dropdown = discord.ui.Select(
-            placeholder="모델 선택",
-            options=[discord.SelectOption(label=i) for i in model_list]
-        )
+            dropdown = discord.ui.Select(
+                placeholder="모델 선택",
+                options=[discord.SelectOption(label=i) for i in model_list]
+            )
 
-        async def callback(x: discord.Interaction):
-            self.generativeAI.model = x.data['values'][0]
-            self.generativeAI.is_gemini = "claude" not in self.generativeAI.model
-            await x.response.send_message(embed=discord.Embed(title="REBOT LLM", color=MAIN_COLOR).add_field(name="다음 모델로 지정되었습니다!", value=x.data['values'][0]))
+            async def callback(x: discord.Interaction):
+                self.generativeAI.model = x.data['values'][0]
+                self.generativeAI.is_gemini = "claude" not in self.generativeAI.model
+                await x.response.send_message(embed=discord.Embed(title="REBOT LLM", color=MAIN_COLOR).add_field(name="다음 모델로 지정되었습니다!", value=x.data['values'][0]))
 
-        dropdown.callback = callback
+            dropdown.callback = callback
 
-        view = discord.ui.View()
-        view.add_item(dropdown)
+            view = discord.ui.View()
+            view.add_item(dropdown)
 
-        sent_msg = await self.msg.channel.send(embed=discord.Embed(title="REBOT LLM", color=MAIN_COLOR).add_field(name="모델을 선택해주세요!", value=f"현재 모델: {self.generativeAI.model}"), view=view)
-        # await self.msg.channel.send(str(model_list))
+            sent_msg = await self.msg.channel.send(embed=discord.Embed(title="REBOT LLM", color=MAIN_COLOR).add_field(name="모델을 선택해주세요!", value=f"현재 모델: {self.generativeAI.model}"), view=view)
+            # await self.msg.channel.send(str(model_list))
     
     async def send_chat(self, generativeAI: GenerativeAI)->None:
         ignored_files = []
@@ -206,24 +230,65 @@ class Commands:
                     {"type": "text", "text": self.msg.content[2:]}
                 ] + claude_attachments
                 })
-            sent_msg = await self.msg.channel.send("<a:loading:1264015095223287878>")
-            with self.claude.messages.stream(
-                model=self.generativeAI.model,
-                max_tokens=2400,
-                temperature=generativeAI.temperature,
-                system=generativeAI.system_instruction,
-                messages=generativeAI.claude_history
-            ) as stream: # message.content[0].text
-                for text in stream.text_stream:
-                    output+=text
-                    all_output+=text
+            if self.generativeAI.is_claude_extended_thinking_enabled and "3-7-sonnet" in self.generativeAI.model:
+                print('Advanced Claude Enabled')
+                with self.claude.messages.stream(
+                    model=self.generativeAI.model,
+                    max_tokens=20000,
+                    thinking={
+                        "type": "enabled",
+                        "budget_tokens": 16000
+                    },
+                    messages=generativeAI.claude_history
+                ) as stream:
+                    for event in stream:
+                        if event.type == "content_block_start":
+                            print(f"\nStarting {event.content_block.type} block...")
+                            blockmsg_text=f"{'💬' if event.content_block.type=='thinking' else '📰'}\n"
+                            blockmsg = await self.msg.channel.send("<a:loading:1264015095223287878>")
+                        elif event.type == "content_block_delta":
+                            if event.delta.type == "thinking_delta":
+                                print(event.delta.thinking, end="", flush=True)
+                                blockmsg_text+=event.delta.thinking
+                                all_output+=event.delta.thinking
+                                await blockmsg.edit(f"{blockmsg_text}")
+                            elif event.delta.type == "text_delta":
+                                print(event.delta.text, end="", flush=True)
+                                blockmsg_text+=event.delta.text
+                                all_output+=event.delta.text
+                                await blockmsg.edit(f"{blockmsg_text}")
+                        elif event.type == "content_block_stop":
+                            print("\nBlock complete.")
+                            await blockmsg.add_reaction("✅")
+                    # for text in stream.text_stream:
+                    #     output+=text
+                    #     all_output+=text
 
-                    if len(output) >1900:
-                        await sent_msg.edit("\n".join(output.split("\n")[0:-1]))
-                        output = output.split("\n")[-1]
-                        sent_msg = await self.msg.channel.send(output)
+                    #     if len(output) >1900:
+                    #         await sent_msg.edit("\n".join(output.split("\n")[0:-1]))
+                    #         output = output.split("\n")[-1]
+                    #         sent_msg = await self.msg.channel.send(output)
 
-                    await sent_msg.edit(content=output)
+                    #     await sent_msg.edit(content=output)
+            else:
+                sent_msg = await self.msg.channel.send("<a:loading:1264015095223287878>")
+                with self.claude.messages.stream(
+                    model=self.generativeAI.model,
+                    max_tokens=2400,
+                    temperature=generativeAI.temperature,
+                    system=generativeAI.system_instruction,
+                    messages=generativeAI.claude_history
+                ) as stream: # message.content[0].text
+                    for text in stream.text_stream:
+                        output+=text
+                        all_output+=text
+
+                        if len(output) >1900:
+                            await sent_msg.edit("\n".join(output.split("\n")[0:-1]))
+                            output = output.split("\n")[-1]
+                            sent_msg = await self.msg.channel.send(output)
+
+                        await sent_msg.edit(content=output)
 
             generativeAI.claude_history.pop()
             
@@ -251,7 +316,7 @@ class Commands:
         with open(f"data/{self.msg.guild.id}/generativeAI.pickle", "wb") as f:
             pickle.dump(generativeAI, f)
 
-        await sent_msg.add_reaction("✅")
+        if not self.generativeAI.is_claude_extended_thinking_enabled: await sent_msg.add_reaction("✅")
 
         return generativeAI
 
