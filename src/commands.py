@@ -62,7 +62,7 @@ class Commands:
         
     async def model_list(self) -> None:
         gemini_model_list = ["gemini-1.5-pro", "gemini-1.5-flash"]+[i.name[7:] for i in genai.list_models() if ("generateContent" in i.supported_generation_methods) and ("exp" in i.name)]
-        claude_model_list = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-opus-latest"]
+        claude_model_list = ["claude-3-7-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-opus-latest"]
         model_list = gemini_model_list+claude_model_list
         
 
