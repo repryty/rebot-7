@@ -330,7 +330,7 @@ class Commands:
         with open(f"data/{self.msg.guild.id}/generativeAI.pickle", "wb") as f:
             pickle.dump(generativeAI, f)
 
-        if not self.generativeAI.is_claude_extended_thinking_enabled: await sent_msg.add_reaction("✅")
+        await sent_msg.add_reaction("✅")
 
         return generativeAI
 
