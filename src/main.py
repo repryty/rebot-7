@@ -4,6 +4,8 @@ import os
 import google.generativeai as genai
 import asyncio
 import pickle
+import sys
+import traceback
 
 from commands import *
 
@@ -51,7 +53,7 @@ claude = anthropic.Anthropic(api_key=os.getenv("REBOT_ANTHROPIC_KEY"))
 async def on_message(message: discord.Message):
     if not message.content.startswith("ㄹ "): return
 
-    print(f"{'[ADMIN]' if message.author.id in ADMIN_USER else '[USER]'} {message.content}")
+    await signal(f"{'[ADMIN]' if message.author.id in ADMIN_USER else '[USER]'} {message.content}", SIGNAL_CHANNEL)
 
     global genai_queue
     global guild_genai
@@ -62,10 +64,15 @@ async def on_message(message: discord.Message):
     # print(message.content)
     commands = Commands(client, message, claude, guild_genai[message.guild.id]).COMMANDS_LIST.get(message.content.split()[1])
     # print(message.content[2:])
-    if commands!=None:
-        await commands()
-    else:
-        genai_queue.append([Commands(client, message, claude, guild_genai[message.guild.id]), message.guild.id])
+    try:
+        if commands!=None:
+            await commands()
+        else:
+            genai_queue.append([Commands(client, message, claude, guild_genai[message.guild.id]), message.guild.id])
+    except Exception:
+        error_type, error_value, error_traceback = sys.exc_info()
+        error_message = f"Error: {error_type.__name__}: {error_value}\n{''.join(traceback.format_tb(error_traceback))}"
+        await signal(error_message, SIGNAL_CHANNEL)
 
 if __name__ == "__main__":
     client.run(os.getenv("REBOT_DISCORD_TOKEN"))

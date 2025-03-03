@@ -43,11 +43,20 @@ class Commands:
             "초기화": self.reset_model,
             "temp": self.set_temp,
             "eval": self.eval,
+            "exec": self.exec,
             "quit": self.quit,
             "명령어": self.print_commands_list,
             "모델목록": self.get_models,
-            "고급클로드": self.toggle_claude_thinking
+            "고급클로드": self.toggle_claude_thinking,
+            "b64e": self.base64_encode,
+            "b64d": self.base64_decode
         }
+
+    async def base64_encode(self) -> None:
+        await self.msg.channel.send(base64.b64encode(self.msg.content[7:].encode('utf-8')).decode('utf-8'))
+        
+    async def base64_decode(self) -> None:
+        await self.msg.channel.send(base64.b64decode(self.msg.content[7:].encode('utf-8')).decode('utf-8'))
 
     async def toggle_claude_thinking(self) -> None:
         prev_state = self.generativeAI.is_claude_extended_thinking_enabled
@@ -72,6 +81,11 @@ class Commands:
     async def eval(self) -> None:
         if self.msg.author.id not in ADMIN_USER: return
         await self.msg.channel.send(f"```\n{eval(self.msg.content[7:])}\n```")
+
+    async def exec(self) -> None:
+        if self.msg.author.id not in ADMIN_USER: return
+        await self.msg.channel.send(f"```\n{exec(self.msg.content[7:])}\n```")
+        # raise Exception
 
     async def quit(self) -> None:
         if self.msg.author.id not in ADMIN_USER: return
