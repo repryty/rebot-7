@@ -6,6 +6,8 @@ import base64
 import os
 import pickle
 import re
+from io import BytesIO
+from PIL import Image
 
 from config import *
 
@@ -223,18 +225,31 @@ class Commands:
             response = model.send_message([self.msg.content[2:]]+gemini_attachments, generation_config={
                 "temperature": generativeAI.temperature,
                 "max_output_tokens": generativeAI.max_token,
+                "response_modalities": ['Text', 'Image']
             }, stream=True)
+
+            response = model.generate_content(
+                model=generativeAI.model,
+                contents=[self.msg.content[2:]]+gemini_attachments,
+                config=genai.types.GenerateContentConfig(response_modalities=['Text', 'Image'])
+            )
+
             sent_msg = await self.msg.channel.send("<a:loading:1264015095223287878>")
-            for chunk in response:
-                all_output+=chunk.text
-                output=apply_custom_emoji(output+chunk.text)
 
-                if len(output) >1900:
-                    await sent_msg.edit("\n".join(output.split("\n")[0:-1]))
-                    output = output.split("\n")[-1]
-                    sent_msg = await self.msg.channel.send(output)
+            for chunk in response.candidates[0].content.parts:
+                if chunk.text is not None:
+                    all_output+=chunk.text
+                    output=apply_custom_emoji(output+chunk.text)
 
-                await sent_msg.edit(output)
+                    if len(output) >1900:
+                        await sent_msg.edit("\n".join(output.split("\n")[0:-1]))
+                        output = output.split("\n")[-1]
+                        sent_msg = await self.msg.channel.send(output)
+
+                    await sent_msg.edit(output)
+                elif chunk.inline_data is not None:
+                    image = Image.open(BytesIO(chunk.inline_data.data))
+                    image.save("test")
             # print(generativeAI.claude_history)
             
         else:
