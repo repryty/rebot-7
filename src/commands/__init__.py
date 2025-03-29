@@ -17,3 +17,11 @@ for file in os.listdir(current_dir):
     if file.endswith('.py') and file != '__init__.py':
         module_name = file[:-3]
         module = importlib.import_module(f"commands.{module_name}")
+
+# from dataclass import ClientData
+# from . import register_command
+
+# @register_command("")
+# async def execute(client_data: ClientData):
+
+#     return client_data

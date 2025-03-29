@@ -1,5 +1,6 @@
 import sys
 from google.genai import types
+from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
 import discord
 import asyncio
 import traceback
@@ -22,6 +23,10 @@ from config import WAITING_EMOJI
 #     gemini_queue = queue
 #     guild_genai_config = config
 
+google_search_tool = Tool(
+    google_search = GoogleSearch()
+)
+
 async def gemini_worker(client, gemini_queue, guild_genai_config):
     from dataclass import GeminiData
     while True:
@@ -40,6 +45,10 @@ async def gemini_worker(client, gemini_queue, guild_genai_config):
             await signal(client, error_message)
 
 async def call_gemini(genai_client: genai.Client, msg: discord.Message, config: GeminiConfig, client: discord.Client):
+    gemini_tool = []
+    if config.isGroundingEnable:
+        gemini_tool.append(google_search_tool)
+    
     ignored_files, attachments = [], []
     for i, attachment in enumerate(msg.attachments):
         filename = f"{msg.author.id}-{i}.{attachment.filename.split(".")[-1]}" # {userid}-{i}.{png,jpg,..etc}
@@ -138,7 +147,8 @@ async def call_gemini(genai_client: genai.Client, msg: discord.Message, config: 
             history=config.history, 
             config=types.GenerateContentConfig(
                 system_instruction=config.system_instruction, 
-                temperature=config.temp
+                temperature=config.temp,
+                tools=gemini_tool,
                 )
             )
     all_output = ""

@@ -13,13 +13,7 @@ class GeminiConfig:
     model: str = "gemini-2.0-flash"
     system_instruction: str = DEFAULT_INSTRUCTION
     history: list = field(default_factory=list) 
-
-@dataclass
-class ClientData:
-    client: discord.Client
-    msg: discord.Message
-    genai_config: GeminiConfig
-    genai_client: genai.Client
+    isGroundingEnable: bool = False
 
 @dataclass
 class GeminiData:
@@ -27,3 +21,19 @@ class GeminiData:
     msg: discord.Message
     guild_genai: genai.Client
     config: GeminiConfig
+
+@dataclass
+class MetronomeData:
+    """
+    tempo<=RPM
+    """
+    voice_client: discord.VoiceClient = None
+    tempo: int = 60
+
+@dataclass
+class ClientData:
+    client: discord.Client
+    msg: discord.Message
+    genai_config: GeminiConfig
+    genai_client: genai.Client
+    metronome_data: MetronomeData

@@ -10,8 +10,9 @@ import sys
 from commands import COMMANDS_LIST
 from config import ADMIN_USER
 from utils import signal
-from dataclass import ClientData, GeminiConfig, GeminiData
+from dataclass import ClientData, GeminiConfig, GeminiData, MetronomeData
 from gemini import gemini_worker
+from metronome import metronome_worker
 
 load_dotenv(verbose=True)
 
@@ -19,10 +20,12 @@ GEMINI_TOKEN = os.getenv("REBOT_GEMINI_TOKEN")
 
 guild_genai: Dict[int, genai.Client] = {}
 guild_genai_config: Dict[int, GeminiConfig] = {}
+guild_metronome: Dict[int, MetronomeData] = {}
 gemini_queue: List[GeminiData] = []
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.voice_states = True
 
 client = discord.Client(intents=intents)
 
@@ -56,7 +59,7 @@ async def on_ready():
 async def on_message(message: discord.Message):
     if message.author == client.user:
         return
-    print(1)
+    # print(1)
     if not message.content.startswith("ㄹ "): return
     await signal(client, f"{'[ADMIN]' if message.author.id in ADMIN_USER else '[USER]'} {message.content}")
 
@@ -65,8 +68,10 @@ async def on_message(message: discord.Message):
         guild_genai[guild_id] = genai.Client(api_key=GEMINI_TOKEN)
     if not guild_genai_config.get(guild_id):
         guild_genai_config[guild_id] = GeminiConfig()
+    if not guild_metronome.get(guild_id):
+        guild_metronome[guild_id] = MetronomeData()
 
-    client_data = ClientData(client, message, guild_genai_config[guild_id], guild_genai[guild_id])
+    client_data = ClientData(client, message, guild_genai_config[guild_id], guild_genai[guild_id], guild_metronome[guild_id])
 
     command = message.content.split()[1]
     if command in COMMANDS_LIST.keys():
@@ -74,6 +79,10 @@ async def on_message(message: discord.Message):
             client_data: ClientData = await COMMANDS_LIST[command](client_data)
             guild_genai[guild_id] = client_data.genai_client
             guild_genai_config[guild_id] = client_data.genai_config
+            guild_metronome[guild_id] = client_data.metronome_data
+            
+            if client_data.metronome_data.voice_client is not None:
+                client.loop.create_task(metronome_worker(guild_metronome[guild_id].voice_client, guild_metronome[guild_id].tempo))
         except Exception:
             await message.add_reaction("❌")
             error_type, error_value, error_traceback = sys.exc_info()
