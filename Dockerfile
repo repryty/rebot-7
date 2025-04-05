@@ -4,6 +4,7 @@ WORKDIR /usr/src/app
 ENV REBOT_DISCORD_TOKEN "undefined"
 ENV REBOT_GEMINI_TOKEN "undefined"
 ENV TZ Asia/Seoul
+ENV PYTHONUNBUFFERED 1
 
 # Add your dependencies to requirements.txt
 COPY requirements.txt .
