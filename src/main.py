@@ -27,7 +27,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.voice_states = True
 
-client = discord.Bot(intents=intents)
+client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
@@ -95,19 +95,6 @@ async def on_message(message: discord.Message):
         pickle.dump(guild_genai, f)
     with open(f"data/guild_genai_config.pickle", "wb") as f:
         pickle.dump(guild_genai_config, f)
-        
-@client.command()
-async def call(ctx: discord.commands.context.ApplicationContext, query: str):
-    msg = await ctx.channel.send("ㄹ "+query)
-    msg.author = ctx.author
-    try:
-        await on_message(msg)
-        await ctx.respond("-# ✅")
-    except Exception:
-        await ctx.respond("-# ❌")
-    finally:
-        await msg.delete()
-    
     
 if __name__ == "__main__":
     client.run(os.getenv("REBOT_DISCORD_TOKEN"))

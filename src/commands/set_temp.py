@@ -4,7 +4,6 @@ from dataclass import ClientData
 from . import register_command
 from config import MAIN_COLOR
 
-@register_command("t")
 @register_command("temp")
 async def execute(client_data: ClientData):
     if len(client_data.msg.content)==6:

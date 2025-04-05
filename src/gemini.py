@@ -46,10 +46,8 @@ async def gemini_worker(client, gemini_queue, guild_genai_config):
 
 async def call_gemini(genai_client: genai.Client, msg: discord.Message, config: GeminiConfig, client: discord.Client):
     gemini_tool = []
-    
     if config.isGroundingEnable:
         gemini_tool.append(google_search_tool)
-        print("grounding is enabled")
     
     ignored_files, attachments = [], []
     for i, attachment in enumerate(msg.attachments):
