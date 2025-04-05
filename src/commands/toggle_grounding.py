@@ -3,6 +3,7 @@ from . import register_command
 from config import MAIN_COLOR
 from discord import Embed
 
+@register_command("g")
 @register_command("grounding")
 async def execute(client_data: ClientData):
     client_data.genai_config.isGroundingEnable = not client_data.genai_config.isGroundingEnable
