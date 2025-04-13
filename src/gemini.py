@@ -7,6 +7,7 @@ import traceback
 import os
 from google import genai
 import pathlib
+import pickle
 
 from dataclass import GeminiConfig
 
@@ -36,7 +37,12 @@ async def gemini_worker(client, gemini_queue, guild_genai_config):
 
                 history = await call_gemini(gemini_data.guild_genai, gemini_data.msg, gemini_data.config, client)
                 old_config = guild_genai_config[gemini_data.msg.guild.id]
-                guild_genai_config[gemini_data.msg.guild.id] = GeminiConfig(old_config.temp, old_config.model, old_config.system_instruction, history)
+                guild_genai_config[gemini_data.msg.guild.id] = GeminiConfig(old_config.temp, old_config.model, old_config.system_instruction, history, old_config.isGroundingEnable)
+                
+                # 변경된 설정 즉시 저장
+                with open(f"data/guild_genai_config.pickle", "wb") as f:
+                    pickle.dump(guild_genai_config, f)
+                
             await asyncio.sleep(1)
         except Exception:
             await gemini_data.msg.add_reaction("❌")

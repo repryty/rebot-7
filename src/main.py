@@ -91,10 +91,5 @@ async def on_message(message: discord.Message):
     else:
         gemini_queue.append(GeminiData(message, guild_genai[guild_id], guild_genai_config[guild_id]))
 
-    with open(f"data/guild_genai.pickle", "wb") as f:
-        pickle.dump(guild_genai, f)
-    with open(f"data/guild_genai_config.pickle", "wb") as f:
-        pickle.dump(guild_genai_config, f)
-    
 if __name__ == "__main__":
     client.run(os.getenv("REBOT_DISCORD_TOKEN"))
