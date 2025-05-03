@@ -87,6 +87,9 @@ async def on_message(message: discord.Message):
             await message.add_reaction("❌")
             error_type, error_value, error_traceback = sys.exc_info()
             error_message = f"Error: {error_type.__name__}: {error_value}\n{''.join(traceback.format_tb(error_traceback))}"
+            if len(error_message)>1900:
+                print(error_message)
+                error_message = f"Error: {error_type.__name__}: {error_value}"
             await signal(client, error_message)
     else:
         gemini_queue.append(GeminiData(message, guild_genai[guild_id], guild_genai_config[guild_id]))
