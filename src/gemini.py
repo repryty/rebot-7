@@ -186,7 +186,9 @@ async def call_gemini(genai_client: genai.Client, msg: discord.Message, config: 
     else:
         response = chat.send_message_stream([msg.content[2:]]+attachments)
         for chunk in response:
-            if chunk.text == None: break
+            if chunk.text == None: 
+                signal(client, "None 출력 감지")
+                break
             all_output+=chunk.text
             output+=chunk.text
             if len(output)<1801:
