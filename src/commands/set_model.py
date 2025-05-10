@@ -11,7 +11,7 @@ async def execute(client_data: ClientData):
         client_data.genai_config.model=model_name
         await client_data.msg.channel.send(embed=discord.Embed(title="REBOT LLM", color=MAIN_COLOR).add_field(name="다음 모델로 지정되었습니다.", value=model_name))
     else:
-        gemini_model_list = ["gemini-2.0-flash", "gemini-2.0-flash-lite"]+[i.name[7:] for i in client_data.genai_client.models.list() if ("generateContent" in i.supported_actions) and (("exp" in i.name) or ("preview" in i.name)]
+        gemini_model_list = ["gemini-2.0-flash", "gemini-2.0-flash-lite"]+[i.name[7:] for i in client_data.genai_client.models.list() if ("generateContent" in i.supported_actions) and (("exp" in i.name) or ("preview" in i.name))]
         model_list = gemini_model_list
         
 
